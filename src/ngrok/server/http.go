@@ -3,7 +3,10 @@ package server
 import (
 	"crypto/tls"
 	"fmt"
+	"html/template"
+
 	vhost "github.com/inconshreveable/go-vhost"
+
 	//"net"
 	"ngrok/conn"
 	"ngrok/log"
@@ -23,6 +26,10 @@ Authorization required
 Content-Length: %d
 
 Tunnel %s not found
+`
+	Request = `HTTP/2.0 404 Not Found
+
+%s
 `
 
 	BadRequest = `HTTP/1.0 400 Bad Request
@@ -90,8 +97,22 @@ func httpHandler(c conn.Conn, proto string) {
 	c.Debug("Found hostname %s in request", host)
 	tunnel := tunnelRegistry.Get(fmt.Sprintf("%s://%s", proto, host))
 	if tunnel == nil {
+
+		// errTmpl, err := assets.Asset("assets/server/error.html")
+		// if err != nil {
+		// 	// 静态资源消失
+		// 	c.Info("No tunnel found for hostname %s, 没有静态资源!!!", host)
+		// 	c.Write([]byte(fmt.Sprintf(NotFound, len(host)+18, host)))
+		// 	return
+		// }
+
+		tmpl := template.Must(template.ParseFiles("assets/server/error.html"))
 		c.Info("No tunnel found for hostname %s", host)
-		c.Write([]byte(fmt.Sprintf(NotFound, len(host)+18, host)))
+		// c.Info("%#v", tmpl.Tree.Root.String())
+
+		c.Write([]byte(fmt.Sprintf(Request, "<!DOCTYPE html>")))
+		tmpl.Execute(c, "404 Tunnel "+host+" not found")
+
 		return
 	}
 
